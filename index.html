@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Estimate Rates</title>
+
+  <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+  <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+  
+   <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <py-config>
+    packages = ["pandas", "matplotlib"]
+    files = ["Graph/Fuelperc.csv"]
+  </py-config>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f6f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 600px;
+      margin: 100px;
+    }
+
+    .card {
+      background: white;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      max-width: 500px;
+      width: 100%;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      font-weight: bold;
+      margin-top: 1rem;
+      display: block;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.3rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+    }
+
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 0.75rem;
+      width: 100%;
+      border-radius: 0.5rem;
+      margin-top: 1.5rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .output {
+      text-align: center;
+      margin-top: 1.5rem;
+      font-size: 1.2rem;
+    }
+
+    .output span {
+      font-weight: bold;
+    }
+
+    #map {
+      height: 600px;
+      margin: 20px auto;
+      width: 600px;
+      border: 2px solid #ccc;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>Estimate Rate Calculator</h2>
+
+    <label for="origin">Origin Docs Country</label>
+    <select id="origin">
+      <option value="USA">USA</option>
+      <option value="CA">CA</option>
+    </select>
+
+    <label for="destination">Destination Docs Country</label>
+    <select id="destination">
+      <option value="USA">USA</option>
+      <option value="CA">CA</option>
+      <option value="MX">MX</option>
+    </select>
+
+    <label for="loading">Loading City</label>
+    <input id="loading" type="text" placeholder="e.g., Amarillo, TX, USA" />
+
+    <label for="delivery">Delivery City</label>
+    <input id="delivery" type="text" placeholder="e.g., McAllen, TX, USA" />
+
+    <button id="calculate">Calculate Estimate</button>
+
+    <div class="output">
+      <p>Estimated Rate: <span id="rate">—</span> <span id="currency">—</span></p>
+      <p>Miles: <span id="miles">—</span></p>
+      <p>$ Per Mile: <span id="ppm">—</span></p>
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <!-- Leaflet JS + Routing -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
+
+  <!-- JavaScript function exposed for PyScript -->
+  <script>
+  
+    let map = L.map('map').setView([39, -98], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+  
+    let routeLine = null;
+    let originMarker = null;
+    let destinationMarker = null;
+
+  async function drawRoute(lat1, lon1, lat2, lon2, city1, city2, geoapi) {
+  const geoapifyKey = geoapi;
+  const url = `https://api.geoapify.com/v1/routing?mode=drive&apiKey=${geoapifyKey}&waypoints=${lat1},${lon1}|${lat2},${lon2}`;
+  
+  console.log("Calling route with URL:", url);
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    console.log("Geoapify response:", data);
+
+    if (!data.features || data.features.length === 0) {
+      console.error("❌ No route returned");
+      return;
+    }
+
+    const rawCoords = data.features[0].geometry.coordinates;
+    const coords = rawCoords.flat().map(c => [c[1], c[0]]);
+    console.log("Route Coordinates:", coords);
+
+    // Remove existing route
+    if (routeLine) {
+      map.removeLayer(routeLine);
+    }
+
+    // Remove old markers
+    if (originMarker) {
+      map.removeLayer(originMarker);
+    }
+    if (destinationMarker) {
+      map.removeLayer(destinationMarker);
+    }
+
+    // Add new route
+    routeLine = L.polyline(coords, { color: 'green', weight: 5 }).addTo(map);
+
+    // Add markers at start and end
+    originMarker = L.marker([lat1, lon1]).addTo(map).bindPopup(`📍 ${city1} (Origin)`).openPopup();
+    destinationMarker = L.marker([lat2, lon2]).addTo(map).bindPopup(`🏁 ${city2} (Destination)`);
+
+    map.fitBounds(routeLine.getBounds());
+    console.log("Route drawn and markers added");
+
+  } catch (error) {
+    console.error("❌ Routing error:", error);
+  }
+}
+
+  window.drawRoute = drawRoute;
+  </script>
+
+
+  <py-script src="Graph/Screen.py"></py-script>
+
+</body>
+
+<footer style="position: fixed; bottom: 0; width: 100%; text-align: center; padding: 10px; background: #222; color: #fff;">
+  © 2025 Gabriela Granda. All rights reserved.
+</footer>
+
+</html>
