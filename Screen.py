@@ -3,7 +3,7 @@ from pyodide.ffi import create_proxy
 from pyodide.http import pyfetch
 import json
 
-geoapify_key = "your_geoapify_key_here"
+geoapify_key = "664e08db960a41e89ece23f94c9edbdd"
 backend_url = "https://calculatorrates.onrender.com/estimate"  # <-- replace with your actual backend URL
 
 async def calculate_estimate(event):
