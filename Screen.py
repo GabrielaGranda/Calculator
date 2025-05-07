@@ -4,7 +4,7 @@ from pyodide.http import pyfetch
 import json
 
 geoapify_key = "your_geoapify_key_here"
-backend_url = "https://your-backend.onrender.com/estimate"  # <-- replace with your actual backend URL
+backend_url = "https://calculatorrates.onrender.com"  # <-- replace with your actual backend URL
 
 async def calculate_estimate(event):
     try:
